@@ -6,6 +6,7 @@ from flask import Flask, request, jsonify, render_template
 import nltk
 from nltk.corpus import stopwords
 import re
+import joblib
 
 nltk.download('stopwords')
 
@@ -30,6 +31,9 @@ X_features = feature_extraction.fit_transform(X)
 model = LogisticRegression()
 model.fit(X_features, Y)
 
+joblib.dump(model, 'spam_classifier_model.joblib')
+joblib.dump(feature_extraction, 'tfidf_vectorizer.joblib')
+
 # Create a Flask app
 app = Flask(__name__)
 
@@ -38,8 +42,8 @@ def is_gibberish(text):
     if len(text) == 0:
         return False
     symbol_ratio = len(re.findall(r'\W', text)) / len(text)
-    # Flag as spam if more than 70% symbols or less than 2 recognizable words
-    if symbol_ratio > 0.7 or len(re.findall(r'\b\w+\b', text)) < 2:
+    # Flag as spam if more than 50% symbols or less than 2 recognizable words
+    if symbol_ratio > 0.3 or len(re.findall(r'\b\w+\b', text)) < 2:
         return True
     return False
 
@@ -53,10 +57,7 @@ def predict():
         message = request.form['message']
         if not message:
                 raise ValueError("No message provided")
-        # new_data_features = feature_extraction.transform([message])
-        # prediction = model.predict(new_data_features)
         
-        # result = "Ham Mail" if prediction[0] == 1 else "Spam Mail"
         if is_gibberish(message):
             result = "Spam Mail"
         else:
